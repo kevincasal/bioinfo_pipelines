@@ -49,7 +49,7 @@ Permisos: Usuario con permisos de ejecución en la terminal.
 
 1. Clonar o descargar este repositorio:
 
-    git clone [https://github.com/kevincasal/bioinfo-pipelines.git](https://github.com/kevincasal/bioinfo-pipelines.git)
+    git clone [https://github.com/kevincasal/bioinfo_pipelines.git](https://github.com/kevincasal/bioinfo_pipelines.git)
     cd bioinfo-pipelines
 
 2. Otorgar permisos de ejecución al script:
