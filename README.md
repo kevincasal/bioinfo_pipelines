@@ -6,10 +6,10 @@ Este repositorio contiene los scripts de automatización, guías y protocolos de
 ---
 
 ## Autoría y Créditos
-* **Autor Principàl / Desarrollador:** [Tu Nombre y Apellido]
-* **Filiación / Departamento:** [Nombre de tu Laboratorio, Centro o Zonal]
+* **Autor Principàl / Desarrollador:** [Kevin Josue Casal Arroyo]
+* **Filiación / Departamento:** [Coordinación Zonal 9-INSPI]
 * **Institución:** Instituto Nacional de Investigación en Salud Pública (INSPI)
-* **Correo de Contacto:** [tu.email@inspi.gob.ec]
+* **Correo de Contacto:** [kevincasal0@gmail.com]
 
 ---
 
