@@ -101,16 +101,16 @@ fi
 # --- Validación / selección interactiva del tipo de base de datos ---
 if [ -z "$DB_TYPE" ]; then
     echo "¿Qué tipo de base de datos de Bakta deseas usar?"
-    select opcion in "light" "full"; do
+    select opcion in "light" "full" "skip"; do
         case "$opcion" in
-            light|full) DB_TYPE="$opcion"; break ;;
-            *) echo "Opción inválida, elige 1 (light) o 2 (full)." ;;
+            light|full|skip) DB_TYPE="$opcion"; break ;;
+            *) echo "Opción inválida, elige 1 (light), 2 (full) o 3 (skip)." ;;
         esac
     done
 else
     case "$DB_TYPE" in
-        light|full) ;;
-        *) echo "‼️  --db-type debe ser 'light' o 'full', recibido: '$DB_TYPE'"; exit 1 ;;
+        light|full|skip) ;;
+        *) echo "‼️  --db-type debe ser 'light', 'full' o 'skip', recibido: '$DB_TYPE'"; exit 1 ;;
     esac
 fi
 
@@ -185,7 +185,9 @@ descargar_db_con_reintentos() {
     done
 }
 
-if [ "$DB_READY" = false ]; then
+if [ "$DB_TYPE" = "skip" ]; then
+    echo "Descarga de base de datos omitida por el usuario."
+elif [ "$DB_READY" = false ]; then
     if ! descargar_db_con_reintentos; then
         exit 1
     fi
