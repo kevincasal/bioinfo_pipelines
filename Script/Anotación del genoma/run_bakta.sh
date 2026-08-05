@@ -27,6 +27,7 @@
 #       --db-type       Tipo de base de datos: light | full
 #                       (si no se especifica, se preguntará interactivamente)
 #       --force-download  Fuerza la descarga de la DB aunque ya exista
+#       --force-output    Permite sobrescribir la carpeta de salida si ya existe
 #       --max-retries    Intentos de descarga ante fallos de red (default: 5)
 #       --retry-delay    Segundos de espera entre reintentos (default: 20, crece con backoff)
 #   -e, --env           Nombre del entorno conda (default: bakta_env)
@@ -51,6 +52,7 @@ THREADS=8
 DB_PATH="$HOME/bakta_db"
 DB_TYPE=""
 FORCE_DOWNLOAD=false
+FORCE_OUTPUT=false
 ENV_NAME="bakta_env"
 MAX_RETRIES=5
 RETRY_DELAY=20   # segundos; crece con cada intento (backoff)
@@ -71,6 +73,7 @@ while [[ $# -gt 0 ]]; do
         -d|--db-path)        DB_PATH="$2"; shift 2 ;;
         --db-type)           DB_TYPE="$2"; shift 2 ;;
         --force-download)    FORCE_DOWNLOAD=true; shift ;;
+        --force-output)      FORCE_OUTPUT=true; shift ;;
         --max-retries)        MAX_RETRIES="$2"; shift 2 ;;
         --retry-delay)        RETRY_DELAY="$2"; shift 2 ;;
         -e|--env)             ENV_NAME="$2"; shift 2 ;;
@@ -195,13 +198,14 @@ fi
 
 # --- Paso 3: Ejecutar Bakta ---
 echo "=== [Paso 3] Ejecutando anotación con Bakta ==="
-mkdir -p "$OUTPUT_DIR"
+# No se crea $OUTPUT_DIR de antemano: Bakta la crea él mismo y falla si ya existe.
 
-bakta \
-    --db "$DB_PATH" \
-    --output "$OUTPUT_DIR" \
-    --threads "$THREADS" \
-    "$INPUT_FASTA"
+BAKTA_ARGS=(--db "$DB_PATH" --output "$OUTPUT_DIR" --threads "$THREADS")
+if [ "$FORCE_OUTPUT" = true ]; then
+    BAKTA_ARGS+=(--force)
+fi
+
+bakta "${BAKTA_ARGS[@]}" "$INPUT_FASTA"
 
 echo "=============================================================================="
 echo " Anotación completada exitosamente."
