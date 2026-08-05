@@ -37,11 +37,6 @@
 # EJEMPLOS:
 #   ./run_bakta.sh -i ensamble.fasta
 #   ./run_bakta.sh -i ensamble.fasta --db-type light -t 16 -o resultados_muestra1
-# ------------------------------------------------------------------------------
-# DERECHOS DE AUTOR Y LICENCIA:
-# (c) 2026 [Tu Nombre completo] / INSPI. Todos los derechos reservados.
-# Desarrollado para uso institucional en las plataformas del INSPI.
-# Prohibida su redistribución o modificación no autorizada sin citar al autor.
 # ==============================================================================
 
 set -euo pipefail
