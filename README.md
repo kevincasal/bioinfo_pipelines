@@ -16,7 +16,7 @@ Este repositorio contiene los scripts de automatización, guías y protocolos de
 ## Estructura del Repositorio
 
 ```text
-inspi-bioinfo-pipelines/
+bioinfo-pipelines/
 ├── README.md                 # Documentación principal del proyecto
 ├── LICENSE                   # Licencia de derechos de autor y términos de uso
 └── scripts/
