@@ -28,6 +28,7 @@
 #                       (si no se especifica, se preguntará interactivamente)
 #       --force-download  Fuerza la descarga de la DB aunque ya exista
 #       --force-output    Permite sobrescribir la carpeta de salida si ya existe
+#       --skip-amr-update Omite la sincronización automática de AMRFinderPlus
 #       --max-retries    Intentos de descarga ante fallos de red (default: 5)
 #       --retry-delay    Segundos de espera entre reintentos (default: 20, crece con backoff)
 #   -e, --env           Nombre del entorno conda (default: bakta_env)
@@ -53,6 +54,7 @@ DB_PATH="$HOME/bakta_db"
 DB_TYPE=""
 FORCE_DOWNLOAD=false
 FORCE_OUTPUT=false
+SKIP_AMR_UPDATE=false
 ENV_NAME="bakta_env"
 MAX_RETRIES=5
 RETRY_DELAY=20   # segundos; crece con cada intento (backoff)
@@ -74,6 +76,7 @@ while [[ $# -gt 0 ]]; do
         --db-type)           DB_TYPE="$2"; shift 2 ;;
         --force-download)    FORCE_DOWNLOAD=true; shift ;;
         --force-output)      FORCE_OUTPUT=true; shift ;;
+        --skip-amr-update)    SKIP_AMR_UPDATE=true; shift ;;
         --max-retries)        MAX_RETRIES="$2"; shift 2 ;;
         --retry-delay)        RETRY_DELAY="$2"; shift 2 ;;
         -e|--env)             ENV_NAME="$2"; shift 2 ;;
@@ -194,6 +197,24 @@ elif [ "$DB_READY" = false ]; then
     if ! descargar_db_con_reintentos; then
         exit 1
     fi
+fi
+
+# --- Paso 2.5: Actualizar base de datos interna de AMRFinderPlus ---
+# Bakta necesita que la DB de AMRFinderPlus (incluida en db-light/db-full)
+# esté sincronizada con la versión instalada de 'amrfinder'; si no, falla
+# más adelante con: "amrfinder error! error code: 1".
+echo "=== [Paso 2.5] Sincronizando base de datos de AMRFinderPlus ==="
+AMRFINDER_DB="$DB_PATH/amrfinderplus-db"
+if [ "$SKIP_AMR_UPDATE" = false ] && [ -d "$AMRFINDER_DB" ]; then
+    if amrfinder_update --force_update --database "$AMRFINDER_DB"; then
+        echo "✅ AMRFinderPlus actualizado correctamente."
+    else
+        echo "⚠️  No se pudo actualizar AMRFinderPlus automáticamente."
+        echo "    Puedes intentarlo manualmente con:"
+        echo "    amrfinder_update --force_update --database $AMRFINDER_DB"
+    fi
+else
+    echo "Se omite la actualización de AMRFinderPlus (--skip-amr-update o carpeta no encontrada)."
 fi
 
 # --- Paso 3: Ejecutar Bakta ---
