@@ -26,3 +26,5 @@ else
     echo "ERROR: No se pudo generar el archivo $ASSEMBLE_SCRIPT. Revisa los parámetros en $CONFIG_FILE."
     exit 1
 fi
+
+# Comando para ejecutar en segundo plano nohup ./run_pipeline.sh > ensamblado.log 2>&1 &
