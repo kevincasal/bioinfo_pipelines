@@ -1,0 +1,49 @@
+# =====================================================================
+# MASURCA CONFIGURATION FILE - OPTIMIZED FOR ILLUMINA-ONLY (BACTERIA/VIRUS)
+# =====================================================================
+
+DATA
+# Illumina paired-end reads: <two-letter prefix> <fragment mean> <fragment stdev> <forward_reads> <reverse_reads>
+# NOTA: Ajustar '350 35' a los valores reales estimados mediante QC (e.g. Picard InsertSizeMetrics o FastQC)
+PE = pe 350 35 /path/to/reads/bacterial_R1.fastq.gz /path/to/reads/bacterial_R2.fastq.gz
+
+# Las librerias opcionales (JUMP, PACBIO, NANOPORE, OTHER, REFERENCE) se omiten al ser un proyecto Illumina-only.
+END
+
+PARAMETERS
+# Configuración del k-mer para el grafo de de Bruijn (modo 'auto' determina el k-mer óptimo)
+GRAPH_KMER_SIZE = auto
+
+# OBLIGATORIO: Debe ser '1' para ensamblados basados exclusivamente en Illumina
+USE_LINKING_MATES = 1
+
+# Tasa de error permitida en Celera Assembler: 'cgwErrorRate=0.25' es el estándar oficial para bacterias y virus
+CA_PARAMETERS = cgwErrorRate=0.25
+
+# Intenta cerrar huecos (gaps) en los scaffolds utilizando lecturas Illumina PE
+CLOSE_GAPS = 1
+
+# Número de hilos de procesamiento (Ajustar al máximo disponible en el servidor)
+NUM_THREADS = 16
+
+# Tamaño del Hash para Jellyfish (Fórmula: Tamaño_Genoma_Estimado * 20)
+# Para bacterias (~5 Mb): 100000000 (100M)
+# Para virus (~100 Kb):   10000000 (10M)
+JF_SIZE = 100000000
+
+# Desactivar ensambladores de lecturas largas o de genomas eucariotas gigantes
+SOAP_ASSEMBLY = 0
+FLYE_ASSEMBLY = 0
+
+# Parámetros inerentes/legacy en entornos Illumina-only (desactivados o en valores por defecto)
+EXTEND_JUMP_READS = 0
+LIMIT_JUMP_COVERAGE = 60
+LHE_COVERAGE = 35
+
+# Configuración de ejecución en clúster (desactivado para procesamiento local)
+USE_GRID = 0
+GRID_ENGINE = SGE
+GRID_QUEUE = all.q
+GRID_BATCH_SIZE = 500000000
+
+END
