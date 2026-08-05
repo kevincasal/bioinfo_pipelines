@@ -85,9 +85,9 @@ echo "=== [Paso 15 y 16] Creación e Instalación: QUAST ==="
 conda create -n quast_env -y
 conda run -n quast_env conda install -c bioconda -c conda-forge quast -y
 
-echo "=== [Paso 17 y 18] Creación e Instalación: Prokka ==="
+echo "=== [Paso 17 y 18] Creación e Instalación: Bakta ==="
 conda create -n prokka_env -y
-conda run -n prokka_env conda install -c bioconda -c conda-forge prokka -y
+conda run -n bakta_env conda install -c bioconda -c conda-forge bakta -y
 
 echo "=== [Paso 19 y 20] Creación e Instalación: MaSuRCA ==="
 conda create -n masurca_env -y
