@@ -5,14 +5,14 @@
 # Script:          setup_bioinfo_env.sh
 # Descripción:     Instalación de Conda y creación segmentada de entornos 
 #                  bioinformáticos (FastQC, MultiQC, Kraken2, Shovill, 
-#                  SPAdes, QUAST, Prokka).
+#                  SPAdes, QUAST, Prokka, MaSuRCA).
 # ------------------------------------------------------------------------------
 # AUTOR:           [KEVIN JOSUE CASAL ARROYO]
 # CARGO:           [ANALISTA ZONAL DE LABORATORIO DE VIGILANCIA EPIDEMIOLÓGICA Y REFERENCIA NACIONAL 2 / Especialista en Bioinformática]
 # DEPARTAMENTO:    [Cordinación zonal 9-INSPI]
 # CONTACTO / EMAIL: [kevincasal0@gmail.com]
 # FECHA:           Agosto 2026
-# VERSIÓN:         1.0.0
+# VERSIÓN:         1.0.1
 # ------------------------------------------------------------------------------
 # DERECHOS DE AUTOR Y LICENCIA:
 # (c) 2026 [Tu Nombre completo] / INSPI. Todos los derechos reservados.
@@ -88,6 +88,10 @@ conda run -n quast_env conda install -c bioconda -c conda-forge quast -y
 echo "=== [Paso 17 y 18] Creación e Instalación: Prokka ==="
 conda create -n prokka_env -y
 conda run -n prokka_env conda install -c bioconda -c conda-forge prokka -y
+
+echo "=== [Paso 19 y 20] Creación e Instalación: MaSuRCA ==="
+conda create -n masurca_env -y
+conda run -n masurca_env conda install -c bioconda -c conda-forge masurca -y
 
 echo "=============================================================================="
 echo " Proceso completado exitosamente."
