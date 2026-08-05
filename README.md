@@ -36,7 +36,7 @@ shovill_bacterias_env                     Shovill                               
 spades_env                                SPAdes                                        Ensamblador de genomas de novo
 quast_env                                 QUAST                                         Evaluación de métricas y calidad de ensamblajes de genomas
 prokka_env                                Prokka                                        Anotación rápida de genomas bacterianos.
-
+masurca_env                               MASURCA                                       Anotación de genomas de novo
 ---
 
 ## Requisitos de Sistema
