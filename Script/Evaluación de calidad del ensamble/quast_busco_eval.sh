@@ -14,17 +14,24 @@ fi
 
 # Configuración
 ASSEMBLY_FILE="primary.genome.scf.fasta"
-REFERENCE=""  # Deja en blanco para De Novo o pon la ruta a tu referencia FASTA
+REFERENCE=""  # Ruta a genoma de referencia si se dispone de uno
 QUAST_OUTPUT_DIR="quast_results"
 BUSCO_OUTPUT_DIR="busco_results"
 THREADS=8
 BUSCO_LINEAGE="bacteria_odb12.2"
 
-# Localizar archivo
+# Verificar existencia del archivo
 if [ ! -f "$ASSEMBLY_FILE" ]; then
-    if [ -f "final.genome.scf.fasta" ]; then ASSEMBLY_FILE="final.genome.scf.fasta";
-    elif [ -f "Test.fasta" ]; then ASSEMBLY_FILE="Test.fasta";
-    else echo "ERROR: No se encontró $ASSEMBLY_FILE"; exit 1; fi
+    if [ -f "CA.mr.41.15.15.0.02/final.genome.scf.fasta" ]; then 
+        ASSEMBLY_FILE="CA.mr.41.15.15.0.02/final.genome.scf.fasta"
+    elif [ -f "final.genome.scf.fasta" ]; then 
+        ASSEMBLY_FILE="final.genome.scf.fasta"
+    elif [ -f "Test.fasta" ]; then 
+        ASSEMBLY_FILE="Test.fasta"
+    else 
+        echo "ERROR: No se encontró el archivo '$ASSEMBLY_FILE'."
+        exit 1
+    fi
 fi
 
 echo "====================================================================="
@@ -54,35 +61,43 @@ echo "[3/4] Extracción y Análisis Multi-Métrica"
 echo "====================================================================="
 
 REPORT_TXT="$QUAST_OUTPUT_DIR/report.txt"
-if [ ! -f "$REPORT_TXT" ]; then echo "ERROR: Falta report.txt"; exit 1; fi
+if [ ! -f "$REPORT_TXT" ]; then echo "ERROR: Falta $REPORT_TXT"; exit 1; fi
 
-# Función auxiliar para extracción robusta desde report.txt
-get_quast_val() {
+# Función de extracción limpia: Extrae solo el ÚLTIMO elemento numérico/cadena de la línea
+parse_quast_clean() {
     local key="$1"
-    local val=$(awk -F'|' -v k="$key" '$1 ~ k {print $2}' "$REPORT_TXT" | head -n 1 | tr -d ' ')
-    echo "${val:-0}"
+    local line=$(grep -E "$key" "$REPORT_TXT" | head -n 1)
+    if [ -n "$line" ]; then
+        # Extraer únicamente el último campo separado por espacios o tabulaciones
+        echo "$line" | awk '{print $NF}' | tr -d ' \t\r'
+    else
+        echo "0"
+    fi
 }
 
-# 1. Extracción de métricas QUAST
-TOTAL_LEN=$(get_quast_val "^Total length \(>= 0 bp\)")
-NUM_CONTIGS=$(get_quast_val "^# contigs \(>= 0 bp\)")
-N50=$(get_quast_val "^N50")
-LARGEST_CONTIG=$(get_quast_val "^Largest contig")
-GC_CONTENT=$(get_quast_val "^GC \(\%\)")
-NS_100KB=$(get_quast_val "^# N's per 100 kbp")
+# 1. Extracción limpia de métricas de QUAST
+TOTAL_LEN=$(parse_quast_clean "^Total length \(>= 0 bp\)")
+[ "$TOTAL_LEN" = "0" ] && TOTAL_LEN=$(parse_quast_clean "^Total length")
 
-# Métricas condicionales si hay referencia
-MISASSEMBLIES=$(get_quast_val "^# misassemblies")
-MISMATCHES=$(get_quast_val "^# mismatches per 100 kbp")
+NUM_CONTIGS=$(parse_quast_clean "^# contigs \(>= 0 bp\)")
+[ "$NUM_CONTIGS" = "0" ] && NUM_CONTIGS=$(parse_quast_clean "^# contigs")
 
-# 2. Extracción de métricas BUSCO
+N50=$(parse_quast_clean "^N50")
+LARGEST_CONTIG=$(parse_quast_clean "^Largest contig")
+GC_CONTENT=$(parse_quast_clean "^GC \(\%\)")
+NS_100KB=$(parse_quast_clean "^# N's per 100 kbp")
+
+MISASSEMBLIES=$(parse_quast_clean "^# misassemblies")
+MISMATCHES=$(parse_quast_clean "^# mismatches per 100 kbp")
+
+# 2. Extracción de BUSCO
 BUSCO_SUMMARY=$(find "$BUSCO_OUTPUT_DIR" -name "short_summary*.txt" | head -n 1)
 BUSCO_C="0"
-if [ -f "$BUSCO_SUMMARY" ]; then
+if [ -n "$BUSCO_SUMMARY" ] && [ -f "$BUSCO_SUMMARY" ]; then
     BUSCO_C=$(grep -oP 'C:\K[0-9.]+(?=%|\s)' "$BUSCO_SUMMARY" | head -n 1 || echo "0")
 fi
 
-echo "--- RESUMEN DE MÉTRICAS EXTRAÍDAS ---"
+echo "--- RESUMEN DE MÉTRICAS OBTENIDAS ---"
 echo " 1. Tamaño Total     : $TOTAL_LEN pb"
 echo " 2. Nº de Contigs    : $NUM_CONTIGS"
 echo " 3. Valor N50        : $N50 pb"
@@ -103,67 +118,75 @@ echo "====================================================================="
 SCORE=0
 WARNINGS=()
 
-# Conversión a enteros para comparaciones lógicas
-SIZE_NUM=${TOTAL_LEN%.*}
-N50_NUM=${N50%.*}
-CONTIGS_NUM=${NUM_CONTIGS%.*}
-LARGEST_NUM=${LARGEST_CONTIG%.*}
+# Limpieza estricta para garantizar valores numéricos puros en Bash
+SIZE_NUM=$(echo "$TOTAL_LEN" | sed 's/[^0-9]//g')
+N50_NUM=$(echo "$N50" | sed 's/[^0-9]//g')
+CONTIGS_NUM=$(echo "$NUM_CONTIGS" | sed 's/[^0-9]//g')
+LARGEST_NUM=$(echo "$LARGEST_CONTIG" | sed 's/[^0-9]//g')
 BUSCO_NUM=${BUSCO_C%.*}
 
-# A. EVALUACIÓN DE TAMAÑO Y TIPO DE ORGANISMO
+# Valores por defecto de seguridad si están vacíos
+SIZE_NUM=${SIZE_NUM:-0}
+N50_NUM=${N50_NUM:-0}
+CONTIGS_NUM=${CONTIGS_NUM:-0}
+LARGEST_NUM=${LARGEST_NUM:-0}
+BUSCO_NUM=${BUSCO_NUM:-0}
+
+# A. TAMAÑO
 echo "[A] Tamaño del Ensamblado:"
 if [ "$SIZE_NUM" -ge 1000000 ] && [ "$SIZE_NUM" -le 10000000 ]; then
-    echo "  -> Rango concordante con genoma bacteriano ($((SIZE_NUM/1000000)) Mb)."
+    echo "  [OK] Tamaño concordante con genoma bacteriano ($((SIZE_NUM/1000000)) Mb / $TOTAL_LEN pb)."
     SCORE=$((SCORE+1))
 else
     WARNINGS+=("Tamaño inusual ($TOTAL_LEN pb) para un aislado bacteriano estándar.")
 fi
 
-# B. CONTINUIDAD (N50, Contigs, Contig más largo)
+# B. CONTINUIDAD
 echo "[B] Continuidad y Fragmentación:"
 if [ "$N50_NUM" -ge 100000 ]; then
-    echo "  -> N50 Alto ($N50 pb >= 100 kb). Excelente para Illumina."
+    echo "  [OK] N50 Excelente ($N50 pb >= 100 kb)."
     SCORE=$((SCORE+2))
 elif [ "$N50_NUM" -ge 30000 ]; then
-    echo "  -> N50 Aceptable ($N50 pb)."
+    echo "  [OK] N50 Aceptable ($N50 pb)."
     SCORE=$((SCORE+1))
 else
-    WARNINGS+=("N50 muy bajo ($N50 pb). Ensamblado altamente fragmentado.")
+    WARNINGS+=("N50 bajo ($N50 pb). Ensamblado fragmentado.")
 fi
 
-if [ "$CONTIGS_NUM" -le 50 ]; then
-    echo "  -> Bajo número de contigs ($NUM_CONTIGS contigs <= 50)."
+if [ "$CONTIGS_NUM" -gt 0 ] && [ "$CONTIGS_NUM" -le 50 ]; then
+    echo "  [OK] Bajo número de contigs ($NUM_CONTIGS contigs <= 50)."
     SCORE=$((SCORE+2))
 elif [ "$CONTIGS_NUM" -le 150 ]; then
-    echo "  -> Número de contigs moderado ($NUM_CONTIGS contigs)."
+    echo "  [MEDIO] Número de contigs moderado ($NUM_CONTIGS contigs)."
     SCORE=$((SCORE+1))
 else
     WARNINGS+=("Número de contigs elevado ($NUM_CONTIGS contigs).")
 fi
 
 if [ "$LARGEST_NUM" -ge 200000 ]; then
-    echo "  -> Contig mayor representativo ($LARGEST_CONTIG pb >= 200 kb)."
+    echo "  [OK] Contig más largo de gran tamaño ($LARGEST_CONTIG pb >= 200 kb)."
     SCORE=$((SCORE+1))
 fi
 
-# C. CALIDAD DE SECUENCIA Y INTEGRIDAD (GC, Gaps, BUSCO)
+# C. INTEGRIDAD GÉNICA
 echo "[C] Integridad Génica y Composición:"
 if [ "$BUSCO_NUM" -ge 95 ]; then
-    echo "  -> BUSCO Excelente ($BUSCO_C% >= 95%). Casi 100% de genes esenciales detectados."
+    echo "  [OK] BUSCO Excelente ($BUSCO_C% >= 95%). Genoma prácticamente completo."
     SCORE=$((SCORE+3))
 elif [ "$BUSCO_NUM" -ge 80 ]; then
-    echo "  -> BUSCO Bueno ($BUSCO_C%)."
+    echo "  [OK] BUSCO Aceptable ($BUSCO_C%)."
     SCORE=$((SCORE+1))
 else
     WARNINGS+=("BUSCO bajo ($BUSCO_C%). Faltan marcadores génicos conservados.")
 fi
 
-# D. ERRORES ESTRUCTURALES (Solo con referencia)
+# D. REFERENCIA (Si existe)
 if [ -n "$REFERENCE" ] && [ -f "$REFERENCE" ]; then
-    echo "[D] Errores de Ensamblado (Vs Referencia):"
-    MIS_NUM=${MISASSEMBLIES%.*}
+    echo "[D] Errores de Ensamblado (vs Referencia):"
+    MIS_NUM=$(echo "$MISASSEMBLIES" | sed 's/[^0-9]//g')
+    MIS_NUM=${MIS_NUM:-0}
     if [ "$MIS_NUM" -eq 0 ]; then
-        echo "  -> Sin reordenamientos ni misassemblies detectados."
+        echo "  [OK] Sin misassemblies respecto a la referencia."
         SCORE=$((SCORE+1))
     else
         WARNINGS+=("Se detectaron $MISASSEMBLIES misassemblies respecto a la referencia.")
@@ -174,14 +197,14 @@ echo ""
 echo "---------------------------------------------------------------------"
 echo "VERDICTO FINAL:"
 if [ "$SCORE" -ge 6 ]; then
-    echo " STATUS: ENSAMBLADO DE ALTA CALIDAD (DE NOVO DRAFT EXCELENTE)"
-    echo " El genoma posee gran continuidad, completitud génica superior al 95% y baja fragmentación."
+    echo " STATUS: ENSAMBLADO DE ALTA CALIDAD (DRAFT EXCELENTE)"
+    echo " El genoma posee excelente continuidad, completitud génica > 95% y baja fragmentación."
 elif [ "$SCORE" -ge 4 ]; then
     echo " STATUS: ENSAMBLADO BUENO / ACEPTABLE"
-    echo " Apto para análisis bioinformáticos generales."
+    echo " Apto para la mayoría de análisis genómicos downstream."
 else
-    echo " STATUS: ENSAMBLADO DEFICIENTE"
-    echo " Se recomienda re-procesar las lecturas primarias o ajustar parámetros de ensamblado."
+    echo " STATUS: ENSAMBLADO DEFICIENTE / REVISAR"
+    echo " Se recomienda re-procesar las lecturas primarias."
 fi
 
 if [ ${#WARNINGS[@]} -gt 0 ]; then
