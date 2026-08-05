@@ -77,9 +77,9 @@ echo "=== [Paso 11 y 12] Creación e Instalación: Shovill ==="
 conda create -n shovill_bacterias_env -y
 conda run -n shovill_bacterias_env conda install -c bioconda -c conda-forge shovill -y
 
-echo "=== [Paso 13 y 14] Creación e Instalación: SPAdes ==="
-conda create -n spades_env -y
-conda run -n spades_env conda install -c bioconda -c conda-forge spades -y
+echo "=== [Paso 13 y 14] Creación e Instalación: BUSCO ==="
+conda create -n busco_env -y
+conda run -n busco_env conda install -c bioconda -c conda-forge busco -y
 
 echo "=== [Paso 15 y 16] Creación e Instalación: QUAST ==="
 conda create -n quast_env -y
