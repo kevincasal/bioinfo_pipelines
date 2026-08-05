@@ -13,7 +13,7 @@ else
 fi
 
 # Configuración general
-ASSEMBLY_FILE="CA.mr.41.15.15.0.02/final.genome.scf.fasta" # Cambiar o asegurar la ruta de tu FASTA
+ASSEMBLY_FILE="CA/primary.genome.scf.fasta" # Cambiar o asegurar la ruta de tu FASTA
 REFERENCE="" 
 QUAST_OUTPUT_DIR="quast_results"
 BUSCO_OUTPUT_DIR="busco_results"
