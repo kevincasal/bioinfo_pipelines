@@ -21,6 +21,8 @@ inspi-bioinfo-pipelines/
 ├── LICENSE                   # Licencia de derechos de autor y términos de uso
 └── scripts/
     └── setup_bioinfo_env.sh  # Script de despliegue automatizado de Miniconda y entornos
+    └── masurca_config.txt    # Archivo de configurarción para MASURCA
+    └── run_pipeline.sh       # Script de ejecución para ensambles de novo con Masurca
 
 ---
 
