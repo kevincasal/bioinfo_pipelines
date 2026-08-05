@@ -27,12 +27,19 @@
 #       --db-type       Tipo de base de datos: light | full
 #                       (si no se especifica, se preguntará interactivamente)
 #       --force-download  Fuerza la descarga de la DB aunque ya exista
+#       --max-retries    Intentos de descarga ante fallos de red (default: 5)
+#       --retry-delay    Segundos de espera entre reintentos (default: 20, crece con backoff)
 #   -e, --env           Nombre del entorno conda (default: bakta_env)
 #   -h, --help          Muestra esta ayuda
 #
 # EJEMPLOS:
 #   ./run_bakta.sh -i ensamble.fasta
 #   ./run_bakta.sh -i ensamble.fasta --db-type light -t 16 -o resultados_muestra1
+# ------------------------------------------------------------------------------
+# DERECHOS DE AUTOR Y LICENCIA:
+# (c) 2026 [Tu Nombre completo] / INSPI. Todos los derechos reservados.
+# Desarrollado para uso institucional en las plataformas del INSPI.
+# Prohibida su redistribución o modificación no autorizada sin citar al autor.
 # ==============================================================================
 
 set -euo pipefail
@@ -45,6 +52,8 @@ DB_PATH="$HOME/bakta_db"
 DB_TYPE=""
 FORCE_DOWNLOAD=false
 ENV_NAME="bakta_env"
+MAX_RETRIES=5
+RETRY_DELAY=20   # segundos; crece con cada intento (backoff)
 LOG_FILE="./run_bakta_$(date +%Y%m%d_%H%M%S).log"
 
 # --- Función de ayuda ---
@@ -62,6 +71,8 @@ while [[ $# -gt 0 ]]; do
         -d|--db-path)        DB_PATH="$2"; shift 2 ;;
         --db-type)           DB_TYPE="$2"; shift 2 ;;
         --force-download)    FORCE_DOWNLOAD=true; shift ;;
+        --max-retries)        MAX_RETRIES="$2"; shift 2 ;;
+        --retry-delay)        RETRY_DELAY="$2"; shift 2 ;;
         -e|--env)             ENV_NAME="$2"; shift 2 ;;
         -h|--help)            mostrar_ayuda ;;
         *) echo "Opción desconocida: $1"; mostrar_ayuda ;;
@@ -140,10 +151,44 @@ if [ -f "$DB_PATH/version.json" ] && [ "$FORCE_DOWNLOAD" = false ]; then
     DB_READY=true
 fi
 
+descargar_db_con_reintentos() {
+    local intento=1
+    local espera="$RETRY_DELAY"
+
+    while [ "$intento" -le "$MAX_RETRIES" ]; do
+        echo "Descargando base de datos tipo '$DB_TYPE' en '$DB_PATH' (intento $intento/$MAX_RETRIES) ..."
+
+        # Limpiar restos de una descarga parcial/corrupta antes de reintentar
+        rm -rf "$DB_PATH"
+        mkdir -p "$DB_PATH"
+
+        if bakta_db download --output "$DB_PATH" --type "$DB_TYPE"; then
+            echo "✅ Descarga completada correctamente."
+            return 0
+        fi
+
+        echo "⚠️  Falló el intento $intento (posible corte de red o timeout de Zenodo)."
+
+        if [ "$intento" -eq "$MAX_RETRIES" ]; then
+            echo "‼️  Se agotaron los $MAX_RETRIES intentos de descarga."
+            echo "    Sugerencias:"
+            echo "      - Verifica tu conexión a internet / VPN institucional."
+            echo "      - Intenta en otro horario (Zenodo puede estar saturado)."
+            echo "      - Vuelve a correr el script con --max-retries y --retry-delay más altos."
+            return 1
+        fi
+
+        echo "    Reintentando en ${espera}s..."
+        sleep "$espera"
+        intento=$((intento + 1))
+        espera=$((espera * 2))   # backoff exponencial
+    done
+}
+
 if [ "$DB_READY" = false ]; then
-    echo "Descargando base de datos tipo '$DB_TYPE' en '$DB_PATH' ..."
-    mkdir -p "$DB_PATH"
-    bakta_db download --output "$DB_PATH" --type "$DB_TYPE"
+    if ! descargar_db_con_reintentos; then
+        exit 1
+    fi
 fi
 
 # --- Paso 3: Ejecutar Bakta ---
