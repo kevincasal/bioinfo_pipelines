@@ -13,11 +13,6 @@
 # CONTACTO / EMAIL: [kevincasal0@gmail.com]
 # FECHA:           Agosto 2026
 # VERSIÓN:         1.0.1
-# ------------------------------------------------------------------------------
-# DERECHOS DE AUTOR Y LICENCIA:
-# (c) 2026 [Tu Nombre completo] / INSPI. Todos los derechos reservados.
-# Desarrollado para uso institucional en las plataformas del INSPI.
-# Prohibida su redistribución o modificación no autorizada sin citar al autor.
 # ==============================================================================
 
 set -e # Detener el script si ocurre un error irrecuperable
