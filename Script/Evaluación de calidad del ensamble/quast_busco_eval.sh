@@ -22,9 +22,9 @@ BUSCO_LINEAGE="bacteria_odb12.2"
 
 # Verificar existencia del archivo
 if [ ! -f "$ASSEMBLY_FILE" ]; then
-    if [ -f "CA.mr.41.15.15.0.02/final.genome.scf.fasta" ]; then 
-        ASSEMBLY_FILE="CA.mr.41.15.15.0.02/final.genome.scf.fasta"
-    elif [ -f "final.genome.scf.fasta" ]; then 
+    if [ -f "CA/primary.genome.scf.fasta" ]; then 
+        ASSEMBLY_FILE="CA*/primary.genome.scf.fasta"
+    elif [ -f "primary.genome.scf.fasta" ]; then 
         ASSEMBLY_FILE="final.genome.scf.fasta"
     elif [ -f "Test.fasta" ]; then 
         ASSEMBLY_FILE="Test.fasta"
