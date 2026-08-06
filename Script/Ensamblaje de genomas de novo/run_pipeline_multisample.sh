@@ -83,6 +83,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "=============================================================================="
 echo " Automatización de Ensamblado de Novo con MaSuRCA (multi-muestra)"
+echo " INSPI 2026"
 echo "=============================================================================="
 
 # --- Paso 0: Activar entorno conda de MaSuRCA automáticamente ---
