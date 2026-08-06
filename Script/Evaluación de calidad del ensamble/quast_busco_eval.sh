@@ -31,7 +31,16 @@
 #                        a todas las muestras)
 #   -t, --threads        Hilos a usar (default: 8)
 #       --lineage        Linaje de BUSCO (default: bacteria_odb12.2)
+#       --busco-download-dir  Carpeta fija para las DBs de BUSCO
+#                        (default: $HOME/busco_downloads; no depende de dónde
+#                        corras el script, y no se borra al limpiar otra carpeta)
 #       --no-reads       No pasar las lecturas FASTQ a QUAST, aunque existan
+#       --min-contig     Longitud mínima de contig para QUAST -m (default: 0)
+#       --kmer-size      Tamaño de k-mer para las métricas -k de QUAST (default: 127)
+#       --no-kmer-stats  Desactiva las métricas basadas en k-mer (-k) de QUAST
+#       --no-circos      Desactiva la generación del gráfico Circos en QUAST
+#                        (requiere tener 'circos' instalado; si falla, QUAST
+#                        avisa y continúa sin el gráfico)
 #   -h, --help           Muestra esta ayuda
 #
 # EJEMPLOS:
@@ -54,8 +63,12 @@ PROJECT_DIR_ARG=""
 REFERENCE=""
 THREADS=8
 BUSCO_LINEAGE="bacteria_odb12.2"
+BUSCO_DOWNLOAD_DIR="$HOME/busco_downloads"
 USE_READS=true
-LOG_FILE="./quast_busco_eval_$(date +%Y%m%d_%H%M%S).log"
+MIN_CONTIG=0
+KMER_STATS=true
+KMER_SIZE=127
+CIRCOS=true
 
 mostrar_ayuda() {
     grep -E '^#( |$)' "$0" | sed -n '/USO:/,/^# -----/p' | sed 's/^# \{0,1\}//;/^-----/d'
@@ -70,18 +83,23 @@ while [[ $# -gt 0 ]]; do
         -r|--reference)      REFERENCE="$2"; shift 2 ;;
         -t|--threads)        THREADS="$2"; shift 2 ;;
         --lineage)           BUSCO_LINEAGE="$2"; shift 2 ;;
+        --busco-download-dir) BUSCO_DOWNLOAD_DIR="$2"; shift 2 ;;
         --no-reads)          USE_READS=false; shift ;;
+        --min-contig)        MIN_CONTIG="$2"; shift 2 ;;
+        --kmer-size)         KMER_SIZE="$2"; shift 2 ;;
+        --no-kmer-stats)     KMER_STATS=false; shift ;;
+        --no-circos)         CIRCOS=false; shift ;;
         -h|--help)            mostrar_ayuda ;;
         *) echo "Opción desconocida: $1"; mostrar_ayuda ;;
     esac
 done
 
-exec > >(tee -a "$LOG_FILE") 2>&1
-
 echo "=============================================================================="
 echo " Evaluación Multi-Métrica de Ensamblados (QUAST + BUSCO)"
 echo " INSPI 2026"
 echo "=============================================================================="
+
+mkdir -p "$BUSCO_DOWNLOAD_DIR"
 
 # --- Paso 0: Inicializar Conda ---
 if command -v conda >/dev/null 2>&1; then
@@ -147,10 +165,18 @@ if [ ! -d "$PROJECT_DIR" ] || [ ! -d "$ASM_DIR" ]; then
 fi
 
 mkdir -p "$EVAL_DIR"
+
+# A partir de aquí el log vive DENTRO del proyecto, no en la carpeta donde
+# está el script (evita que ~/Downloads se llene de logs de distintos lotes).
+mkdir -p "$PROJECT_DIR/logs"
+LOG_FILE="$PROJECT_DIR/logs/quast_busco_eval_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 echo "Proyecto      : $PROJECT_DIR"
 echo "Ensamblados   : $ASM_DIR"
 echo "Lecturas (PE) : $SEQ_DIR"
 echo "Evaluaciones  : $EVAL_DIR"
+echo "BUSCO downloads (fijo, no se borra por proyecto): $BUSCO_DOWNLOAD_DIR"
 
 # --- Función: dado un nombre de muestra, busca su par R1/R2 en $SEQ_DIR ---
 buscar_lecturas() {
@@ -222,13 +248,20 @@ evaluar_muestra() {
     echo "[1/2] Ejecutando QUAST (quast_env)..."
     conda activate quast_env || { echo "‼️  No se pudo activar quast_env"; return 1; }
 
-    QUAST_ARGS=("$assembly" -o "$quast_out" -t "$THREADS" --min-contig 500)
+    QUAST_ARGS=(-o "$quast_out" -t "$THREADS" -m "$MIN_CONTIG")
+    if [ "$KMER_STATS" = true ]; then
+        QUAST_ARGS+=(-k --k-mer-size "$KMER_SIZE")
+    fi
+    if [ "$CIRCOS" = true ]; then
+        QUAST_ARGS+=(--circos)
+    fi
     if [ -n "$r1" ] && [ -n "$r2" ]; then
-        QUAST_ARGS+=(-1 "$r1" -2 "$r2")
+        QUAST_ARGS+=(--pe1 "$r1" --pe2 "$r2")
     fi
     if [ -n "$REFERENCE" ] && [ -f "$REFERENCE" ]; then
         QUAST_ARGS+=(-r "$REFERENCE")
     fi
+    QUAST_ARGS+=("$assembly")
 
     if ! quast.py "${QUAST_ARGS[@]}"; then
         echo "‼️  QUAST falló para '$sample'."
@@ -244,7 +277,8 @@ evaluar_muestra() {
 
     rm -rf "$busco_out"
     if ! busco -i "$assembly" -m genome -o "$(basename "$busco_out")" \
-               --out_path "$sample_eval_dir" -c "$THREADS" -l "$BUSCO_LINEAGE"; then
+               --out_path "$sample_eval_dir" -c "$THREADS" -l "$BUSCO_LINEAGE" \
+               --download_path "$BUSCO_DOWNLOAD_DIR"; then
         echo "‼️  BUSCO falló para '$sample'."
         conda deactivate
         return 1
