@@ -69,8 +69,8 @@ las veces que necesites, en cualquier orden que tenga sentido para tu caso
 ## 0. Requisitos previos
 
 - Ubuntu/Linux (probado en Ubuntu 24.x) con conexión a internet.
-- Espacio en disco: reserva al menos **10 GB** libres (la base de datos `full`
-  de Bakta y las de BUSCO pesan varios GB).
+- Espacio en disco: reserva al menos **35 GB** libres (la base de datos `light`
+  de Bakta y las de BUSCO pesan varios GB), o 75 GB con la base de datos `full`
 - Los cuatro scripts en la misma carpeta de trabajo, con permisos de ejecución:
 
 ```bash
