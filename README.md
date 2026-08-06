@@ -17,12 +17,19 @@ Este repositorio contiene los scripts de automatización, guías y protocolos de
 
 ```text
 bioinfo-pipelines/
-├── README.md                 # Documentación principal del proyecto
-├── LICENSE                   # Licencia de derechos de autor y términos de uso
-└── scripts/
-    └── setup_bioinfo_env.sh  # Script de despliegue automatizado de Miniconda y entornos
-    └── masurca_config.txt    # Archivo de configurarción para MASURCA
-    └── run_pipeline.sh       # Script de ejecución para ensambles de novo con Masurca
+├── README.md                          # Documentación principal del proyecto
+├── LICENSE                            # Licencia de derechos de autor y términos de uso
+└── Script/
+    ├── Anotación del genoma/
+    │   └── run_bakta.sh               # Script de anotación genómica con Bakta
+    ├── Ensamblaje de genomas de novo/
+    │   ├── masurca_config.txt         # Archivo de configuración para MASURCA
+    │   └── run_pipeline.sh            # Script de ejecución para ensambles de novo con MASURCA
+    ├── Evaluación de calidad del ensa.../
+    │   └── quast_busco_eval.sh        # Evaluación de métricas de ensamblado con QUAST y BUSCO
+    └── Instalación de programas/
+        ├── setup_bioinfo_env.sh       # Script de despliegue automatizado de Miniconda y entornos
+        └── setup_bioinfo_env_v1.sh    # Versión alternativa/anterior del script de setup
 
 ---
 
@@ -35,7 +42,7 @@ kraken2_env                               Kraken2                               
 shovill_bacterias_env                     Shovill                                       Ensamblaje genómico optimizado para genomas bacterianos
 spades_env                                SPAdes                                        Ensamblador de genomas de novo
 quast_env                                 QUAST                                         Evaluación de métricas y calidad de ensamblajes de genomas
-prokka_env                                Prokka                                        Anotación rápida de genomas bacterianos.
+bakta_env                                 Bakta                                         Anotación rápida de genomas bacterianos.
 masurca_env                               MASURCA                                       Anotación de genomas de novo
 ---
 
