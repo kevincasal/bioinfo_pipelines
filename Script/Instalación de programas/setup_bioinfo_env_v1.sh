@@ -113,8 +113,10 @@ crear_entorno "bakta_env" "bakta" "python=3.11"
 echo "=== [Paso 19-20] MaSuRCA ==="
 crear_entorno "masurca_env" "masurca"
 
+source ~/miniforge3/etc/profile.d/conda.sh && conda init bash && source ~/.bashrc && conda env list
+
 echo "=============================================================================="
 echo " Proceso completado exitosamente."
 echo " Log completo guardado en: $LOG_FILE"
-echo " Desarrollado por: [Kevin Josué Casal A.] | INSPI 2026"
+echo " Desarrollado por: [Kevin Josué Casal A.] | 
 echo "=============================================================================="
