@@ -28,6 +28,9 @@
 #       --pe-stdev       Desviación estándar del inserto (default: 50)
 #       --jf-size        Tamaño del hash de Jellyfish para MaSuRCA
 #                        (default: 200000000; súbelo para genomas más grandes)
+#       --close-gaps     1 = cerrar gaps del ensamblado (default), 0 = omitir
+#                        este paso (útil si tu máquina tiene poca RAM y falla
+#                        con "std::bad_alloc" durante el gap-closing)
 #   -e, --env            Nombre del entorno conda (default: masurca_env)
 #   -h, --help           Muestra esta ayuda
 #
@@ -55,8 +58,8 @@ THREADS=8
 PE_MEAN=300
 PE_STDEV=50
 JF_SIZE=200000000
+CLOSE_GAPS=1
 ENV_NAME="masurca_env"
-LOG_FILE="./run_pipeline_$(date +%Y%m%d_%H%M%S).log"
 
 mostrar_ayuda() {
     grep -E '^#( |$)' "$0" | sed -n '/USO:/,/^# -----/p' | sed 's/^# \{0,1\}//;/^-----/d'
@@ -73,13 +76,12 @@ while [[ $# -gt 0 ]]; do
         --pe-mean)            PE_MEAN="$2"; shift 2 ;;
         --pe-stdev)           PE_STDEV="$2"; shift 2 ;;
         --jf-size)            JF_SIZE="$2"; shift 2 ;;
+        --close-gaps)         CLOSE_GAPS="$2"; shift 2 ;;
         -e|--env)              ENV_NAME="$2"; shift 2 ;;
         -h|--help)             mostrar_ayuda ;;
         *) echo "Opción desconocida: $1"; mostrar_ayuda ;;
     esac
 done
-
-exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "=============================================================================="
 echo " Automatización de Ensamblado de Novo con MaSuRCA (multi-muestra)"
@@ -160,6 +162,12 @@ SEQ_DIR="$PROJECT_DIR/secuencias"
 RESULTS_DIR="$PROJECT_DIR/ensamblados_finales"
 
 mkdir -p "$SEQ_DIR" "$RESULTS_DIR"
+
+# A partir de aquí el log vive DENTRO del proyecto, no en la carpeta donde
+# está el script (evita que ~/Downloads se llene de logs de distintos lotes).
+mkdir -p "$PROJECT_DIR/logs"
+LOG_FILE="$PROJECT_DIR/logs/run_pipeline_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo ""
 echo "Carpeta del proyecto : $PROJECT_DIR"
@@ -299,6 +307,7 @@ CA_PARAMETERS = cgwErrorRate=0.15
 NUM_THREADS = $THREADS
 JF_SIZE = $JF_SIZE
 DO_HOMOPOLYMER_TRIM = 0
+CLOSE_GAPS = $CLOSE_GAPS
 END
 EOF
 
