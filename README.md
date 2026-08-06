@@ -63,7 +63,7 @@ Permisos: Usuario con permisos de ejecución en la terminal.
 
 2. Otorgar permisos de ejecución al script:
     
-    chmod +x scripts/setup_bioinfo_env.sh
+    chmod +x scripts/setup_bioinfo_env_v1.sh
 
 3. Ejecutar el script de despliegue:
     ./scripts/setup_bioinfo_env.sh
