@@ -24,7 +24,7 @@ CA_PARAMETERS = cgwErrorRate=0.25
 CLOSE_GAPS = 1
 
 # Número de hilos de procesamiento (Ajustar al máximo disponible en el servidor)
-NUM_THREADS = 16
+NUM_THREADS = 8
 
 # Tamaño del Hash para Jellyfish (Fórmula: Tamaño_Genoma_Estimado * 20)
 # Para bacterias (~5 Mb): 100000000 (100M)
