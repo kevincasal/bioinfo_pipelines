@@ -103,7 +103,7 @@ por herramienta, instalando cada paquete con `mamba` para mayor velocidad:
 | `bakta_env` | Bakta *(Python 3.11 fijo)* |
 | `masurca_env` | MaSuRCA |
 
-El script es idempotente: si vuelves a correrlo, detecta qué entornos ya
+El script es independiente: si vuelves a correrlo, detecta qué entornos ya
 existen y no los recrea. Deja un log con timestamp en
 `~/setup_bioinfo_env_FECHA.log`.
 
@@ -112,8 +112,6 @@ existen y no los recrea. Deja un log con timestamp en
 > más recientes como 3.12+/3.14 — si tu sistema tiene una versión más nueva
 > por defecto, el `python=3.11` en la creación del entorno evita el
 > conflicto.
-
-
 
 ---
 
@@ -271,9 +269,6 @@ nohup ./run_pipeline.sh > ensamblado.log 2>&1 &
 
 ## Créditos
 
-Desarrollado por **Kevin Josué Casal Arroyo** — Analista Zonal de Laboratorio
-de Vigilancia Epidemiológica y Referencia Nacional 2, Coordinación Zonal 9,
-INSPI. Contacto: kevincasal0@gmail.com
 Desarrollado por **Kevin Josué Casal Arroyo** — Analista Zonal de Laboratorio
 de Vigilancia Epidemiológica y Referencia Nacional 2, Coordinación Zonal 9,
 INSPI. Contacto: kevincasal0@gmail.com
