@@ -13,16 +13,21 @@
 # DEPARTAMENTO:    [Cordinación zonal 9-INSPI]
 # CONTACTO / EMAIL: [kevincasal0@gmail.com]
 # FECHA:           Agosto 2026
-# VERSIÓN:         2.0.0 (multi-muestra, carpeta de proyecto interactiva)
+# VERSIÓN:         3.0.0 (100% no interactivo: crea carpetas automáticamente)
 # ------------------------------------------------------------------------------
 # USO:
 #   ./run_pipeline.sh [opciones]
 #
-# OPCIONES (todas opcionales; si no las pasas, el script pregunta):
-#   -l, --location       "escritorio" o "documentos" (dónde crear el proyecto)
+# El script NUNCA pregunta nada por teclado. Crea las carpetas necesarias
+# automáticamente (con valores por defecto si no le pasas banderas) y, si la
+# carpeta de secuencias está vacía, te avisa y termina — sin colgarse ni
+# esperar una respuesta. Vuelves a correrlo cuando ya hayas copiado tus
+# archivos ahí. Por eso es seguro usarlo con nohup desde el primer momento.
+#
+# OPCIONES (todas opcionales, con valores por defecto):
+#   -l, --location       "escritorio" o "documentos" (default: escritorio)
 #   -n, --project-name    Nombre de la carpeta del proyecto
-#   -y, --yes            Omite la confirmación de "ya coloqué mis secuencias"
-#                        (úsalo solo si ya sabes que los archivos ya están ahí)
+#                        (default: proyecto_FECHA_HORA, ej. proyecto_20260806_120000)
 #   -t, --threads        Hilos para MaSuRCA (default: 8)
 #       --pe-mean        Tamaño medio de inserto de las lecturas PE (default: 300)
 #       --pe-stdev       Desviación estándar del inserto (default: 50)
@@ -35,9 +40,12 @@
 #   -h, --help           Muestra esta ayuda
 #
 # EJEMPLOS:
-#   ./run_pipeline.sh
-#   ./run_pipeline.sh -l escritorio -n lote_agosto2026 -y -t 16
-#   nohup ./run_pipeline.sh -l escritorio -n lote_agosto2026 -y > /dev/null 2>&1 &
+#   # 1) Primera corrida: solo crea las carpetas (aún no hay secuencias)
+#   ./run_pipeline.sh -n lote_agosto2026
+#
+#   # 2) Copias tus .fastq.gz a la carpeta 'secuencias' que se creó, y corres
+#   #    de nuevo (puede ir directo con nohup, ya que nunca pregunta nada):
+#   nohup ./run_pipeline.sh -n lote_agosto2026 < /dev/null > salida.log 2>&1 &
 # ------------------------------------------------------------------------------
 # DERECHOS DE AUTOR Y LICENCIA:
 # (c) 2026 [Tu Nombre completo] / INSPI. Todos los derechos reservados.
@@ -53,7 +61,6 @@ set -uo pipefail
 # --- Valores por defecto ---
 LOCATION_ARG=""
 PROJECT_NAME_ARG=""
-SKIP_CONFIRM=false
 THREADS=8
 PE_MEAN=300
 PE_STDEV=50
@@ -71,7 +78,6 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -l|--location)       LOCATION_ARG="$2"; shift 2 ;;
         -n|--project-name)    PROJECT_NAME_ARG="$2"; shift 2 ;;
-        -y|--yes)             SKIP_CONFIRM=true; shift ;;
         -t|--threads)         THREADS="$2"; shift 2 ;;
         --pe-mean)            PE_MEAN="$2"; shift 2 ;;
         --pe-stdev)           PE_STDEV="$2"; shift 2 ;;
@@ -114,25 +120,17 @@ if ! conda activate "$ENV_NAME" 2>/dev/null; then
 fi
 echo "Entorno '$ENV_NAME' activado correctamente."
 
-# --- Paso 1: Elegir ubicación y nombre de la carpeta del proyecto ---
+# --- Paso 1: Ubicación y nombre de la carpeta del proyecto (sin preguntar) ---
 echo ""
 echo "=== [Paso 1] Carpeta del proyecto ==="
 
-if [ -n "$LOCATION_ARG" ]; then
-    case "${LOCATION_ARG,,}" in
-        escritorio|desktop) UBICACION="Escritorio" ;;
-        documentos|documents) UBICACION="Documentos" ;;
-        *) echo "‼️  --location debe ser 'escritorio' o 'documentos'"; exit 1 ;;
-    esac
-else
-    echo "¿Dónde deseas crear la carpeta del proyecto?"
-    select UBICACION in "Escritorio" "Documentos"; do
-        case "$UBICACION" in
-            Escritorio|Documentos) break ;;
-            *) echo "Opción inválida, elige 1 (Escritorio) o 2 (Documentos)." ;;
-        esac
-    done
-fi
+# Ubicación: escritorio por defecto si no se especifica
+LOCATION_VAL="${LOCATION_ARG:-escritorio}"
+case "${LOCATION_VAL,,}" in
+    escritorio|desktop) UBICACION="Escritorio" ;;
+    documentos|documents) UBICACION="Documentos" ;;
+    *) echo "‼️  --location debe ser 'escritorio' o 'documentos'"; exit 1 ;;
+esac
 
 if [ "$UBICACION" = "Escritorio" ]; then
     if [ -d "$HOME/Desktop" ]; then BASE_DIR="$HOME/Desktop";
@@ -145,16 +143,11 @@ else
 fi
 mkdir -p "$BASE_DIR"
 
+# Nombre del proyecto: si no se especifica, se genera uno con fecha/hora
 if [ -n "$PROJECT_NAME_ARG" ]; then
-    PROJECT_NAME="$PROJECT_NAME_ARG"
+    PROJECT_NAME="${PROJECT_NAME_ARG// /_}"
 else
-    read -rp "Nombre para la carpeta del proyecto (ej. 'lote_agosto2026'): " PROJECT_NAME
-fi
-PROJECT_NAME="${PROJECT_NAME// /_}"
-
-if [ -z "$PROJECT_NAME" ]; then
-    echo "‼️  El nombre del proyecto no puede estar vacío."
-    exit 1
+    PROJECT_NAME="proyecto_$(date +%Y%m%d_%H%M%S)"
 fi
 
 PROJECT_DIR="$BASE_DIR/$PROJECT_NAME"
@@ -174,32 +167,19 @@ echo "Carpeta del proyecto : $PROJECT_DIR"
 echo "  - Coloca aquí tus lecturas (.fastq.gz, pares R1/R2): $SEQ_DIR"
 echo "  - Los ensamblados finales se copiarán a             : $RESULTS_DIR"
 
-# --- Paso 2: Confirmación de que las secuencias ya están en su lugar ---
-if [ "$SKIP_CONFIRM" = false ]; then
+# --- Paso 2: Verificar que haya secuencias (sin preguntar) ---
+if [ -z "$(ls -A "$SEQ_DIR" 2>/dev/null)" ]; then
     echo ""
-    while true; do
-        read -rp "¿Ya colocaste tus secuencias en '$SEQ_DIR'? (s/n): " resp
-        case "${resp,,}" in
-            s|si)
-                if [ -z "$(ls -A "$SEQ_DIR" 2>/dev/null)" ]; then
-                    echo "⚠️  La carpeta '$SEQ_DIR' todavía está vacía. Copia los archivos y vuelve a responder."
-                else
-                    break
-                fi
-                ;;
-            n|no)
-                echo "    Cuando termines de copiar los archivos, escribe 's' para continuar."
-                ;;
-            *)
-                echo "    Responde 's' (sí) o 'n' (no)."
-                ;;
-        esac
-    done
-else
-    if [ -z "$(ls -A "$SEQ_DIR" 2>/dev/null)" ]; then
-        echo "‼️  Usaste --yes pero '$SEQ_DIR' está vacía. No hay nada que ensamblar."
-        exit 1
-    fi
+    echo "📁 Carpeta creada. Por ahora está vacía."
+    echo "   Copia tus archivos .fastq.gz (pares R1/R2) en:"
+    echo "     $SEQ_DIR"
+    echo ""
+    echo "   Cuando ya estén ahí, vuelve a correr exactamente el mismo comando"
+    echo "   (usando el mismo nombre de proyecto) para que el ensamblado arranque:"
+    echo ""
+    echo "     nohup ./run_pipeline.sh -l ${UBICACION,,} -n $PROJECT_NAME < /dev/null > salida.log 2>&1 &"
+    echo ""
+    exit 0
 fi
 
 # --- Paso 3: Detectar pares de lecturas (una muestra = un par R1/R2) ---
@@ -338,4 +318,4 @@ echo "Log completo: $LOG_FILE"
 echo "=============================================================================="
 echo ""
 echo "Sugerencia para lotes grandes (corre en segundo plano sin preguntas):"
-echo "  nohup ./run_pipeline.sh -l ${UBICACION,,} -n $PROJECT_NAME -y > /dev/null 2>&1 &"
+echo "  nohup ./run_pipeline.sh -l ${UBICACION,,} -n $PROJECT_NAME < /dev/null > salida.log 2>&1 &"
