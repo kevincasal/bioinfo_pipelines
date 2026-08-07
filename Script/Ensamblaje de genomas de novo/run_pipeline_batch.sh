@@ -44,18 +44,14 @@ PE_STDEV=35              # Desviación estándar del inserto
 GRAPH_KMER_SIZE="auto"   # K-mer del grafo de de Bruijn ('auto' deja que MaSuRCA lo calcule)
 USE_LINKING_MATES=1      # OBLIGATORIO en 1 para ensamblados solo-Illumina
 CA_ERROR_RATE=0.25       # cgwErrorRate de Celera Assembler; 0.25 es el estándar para bacterias/virus
-CLOSE_GAPS=0             # 1 = cerrar gaps del ensamblado; 0 = omitir este paso
-                        # (déjalo en 0 si tu máquina tiene poca RAM; el gap-closing
-                        #  es la etapa que más memoria consume)
+CLOSE_GAPS=1             # Intenta cerrar huecos (gaps) en los scaffolds con lecturas Illumina PE
 
-THREADS=8                # Hilos/núcleos a usar (ajusta al máximo disponible en el servidor)
+THREADS=38                # Hilos/núcleos a usar (ajusta al máximo disponible en el servidor)
 
-JF_SIZE=200000000        # Tamaño del hash de Jellyfish (nº de k-mers reservados en memoria).
-                        # Regla práctica para bacterias:
-                        #   genoma ~5 Mb con cobertura alta : 50M-100M
-                        #   genomas pequeños (<3 Mb)        : 30M-50M
-                        #   genomas grandes (>8 Mb)         : 100M-200M
-                        # Se deja un valor moderado por defecto para lotes automatizados.
+# Tamaño del hash de Jellyfish (fórmula: tamaño_genoma_estimado * 20)
+#   Bacterias (~5 Mb): 100000000 (100M)
+#   Virus (~100 Kb):    10000000 (10M)
+JF_SIZE=100000000
 
 SOAP_ASSEMBLY=0           # Desactivado: no aplica a bacterias/Illumina-only
 FLYE_ASSEMBLY=0           # Desactivado: es para lecturas largas (PacBio/Nanopore)
@@ -64,17 +60,7 @@ EXTEND_JUMP_READS=0       # Legacy de librerías JUMP, no aplica aquí
 LIMIT_JUMP_COVERAGE=60
 LHE_COVERAGE=35
 
-USE_GRID=0                # 0 = ejecución local (no cluster/SGE)
-GRID_ENGINE="SGE"
-GRID_QUEUE="all.q"
-GRID_BATCH_SIZE=100000000  # Reducido desde el default de MaSuRCA (500000000) para
-                           # evitar picos de memoria innecesarios en máquinas modestas.
 
-# --- Límite de lecturas en memoria durante el gap-closing ---
-# Esta es la causa directa del error "std::bad_alloc" / "signal 6" que puede
-# aparecer en la etapa de gap-closing: MaSuRCA intenta reservar espacio para
-# demasiadas lecturas a la vez. Bajarlo reduce drásticamente el uso de RAM.
-MAX_READS_IN_MEMORY=5000000
 
 # ==============================================================================
 # ------------------------- FIN DE LA CONFIGURACIÓN ---------------------------
@@ -195,39 +181,33 @@ ensamblar_muestra() {
 # Generado automáticamente para la muestra: $sample
 # =====================================================================
 DATA
-# Illumina paired-end reads: <prefijo> <inserto medio> <desviación estándar> <R1> <R2>
-# NOTA: '$PE_MEAN $PE_STDEV' se ajustó en las variables de configuración del script.
+# Illumina paired-end reads: <two-letter prefix> <fragment mean> <fragment stdev> <forward_reads> <reverse_reads>
+# NOTA: Ajustar '$PE_MEAN $PE_STDEV' a los valores reales estimados mediante QC (e.g. Picard InsertSizeMetrics o FastQC)
 PE = pe $PE_MEAN $PE_STDEV $r1 $r2
-# Librerías opcionales (JUMP, PACBIO, NANOPORE, OTHER, REFERENCE) se omiten:
-# este es un proyecto Illumina-only.
+# Las librerias opcionales (JUMP, PACBIO, NANOPORE, OTHER, REFERENCE) se omiten al ser un proyecto Illumina-only.
 END
 PARAMETERS
-# Configuración del k-mer para el grafo de de Bruijn ('auto' = MaSuRCA lo calcula)
+# Configuración del k-mer para el grafo de de Bruijn (modo 'auto' determina el k-mer óptimo)
 GRAPH_KMER_SIZE = $GRAPH_KMER_SIZE
-# OBLIGATORIO: debe ser 1 para ensamblados basados exclusivamente en Illumina
+# OBLIGATORIO: Debe ser '1' para ensamblados basados exclusivamente en Illumina
 USE_LINKING_MATES = $USE_LINKING_MATES
-# Tasa de error permitida en Celera Assembler (estándar para bacterias/virus: 0.25)
+# Tasa de error permitida en Celera Assembler: 'cgwErrorRate=0.25' es el estándar oficial para bacterias y virus
 CA_PARAMETERS = cgwErrorRate=$CA_ERROR_RATE
-# Intenta cerrar huecos (gaps) en los scaffolds usando lecturas Illumina PE
+# Intenta cerrar huecos (gaps) en los scaffolds utilizando lecturas Illumina PE
 CLOSE_GAPS = $CLOSE_GAPS
-# Límite de lecturas cargadas en memoria durante el gap-closing (evita bad_alloc)
-MAX_READS_IN_MEMORY = $MAX_READS_IN_MEMORY
-# Número de hilos de procesamiento
+# Número de hilos de procesamiento (Ajustar al máximo disponible en el servidor)
 NUM_THREADS = $THREADS
-# Tamaño del hash de Jellyfish (ver regla práctica en la configuración del script)
+# Tamaño del Hash para Jellyfish (Fórmula: Tamaño_Genoma_Estimado * 20)
+# Para bacterias (~5 Mb): 100000000 (100M)
+# Para virus (~100 Kb):   10000000 (10M)
 JF_SIZE = $JF_SIZE
-# Desactivar ensambladores de lecturas largas / genomas eucariotas gigantes
+# Desactivar ensambladores de lecturas largas o de genomas eucariotas gigantes
 SOAP_ASSEMBLY = $SOAP_ASSEMBLY
 FLYE_ASSEMBLY = $FLYE_ASSEMBLY
-# Parámetros legacy en entornos Illumina-only (desactivados o en valores por defecto)
+# Parámetros inerentes/legacy en entornos Illumina-only (desactivados o en valores por defecto)
 EXTEND_JUMP_READS = $EXTEND_JUMP_READS
 LIMIT_JUMP_COVERAGE = $LIMIT_JUMP_COVERAGE
 LHE_COVERAGE = $LHE_COVERAGE
-# Configuración de ejecución en clúster (desactivada para procesamiento local)
-USE_GRID = $USE_GRID
-GRID_ENGINE = $GRID_ENGINE
-GRID_QUEUE = $GRID_QUEUE
-GRID_BATCH_SIZE = $GRID_BATCH_SIZE
 END
 EOF
 
